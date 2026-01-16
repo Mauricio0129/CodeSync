@@ -10,25 +10,16 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var DB *pgxpool.Pool
-
 func main() {
-	router := routes.RegisterRoutes()
-	log.Println("Server starting on :8080")
+	objcontext := context.Background()
 
-	// Creates a Config object for connecting to the db
-	poolConfig, err := pgxpool.ParseConfig(os.Getenv("DATABASE_URL"))
+	pool, err := pgxpool.New(objcontext, os.Getenv("DATABASE_URL")) // Logs the error and exits the program
 	if err != nil {
-		log.Fatalln("Unable to parse DATABASE_URL:", err)
+		log.Fatal("Error connecting to database", err)
 	}
 
-	// Uses the context object with no wait limit which is handy for setup
-	DB, err = pgxpool.NewWithConfig(context.Background(), poolConfig)
-	if err != nil {
-		log.Fatalln("Unable to create connection pool:", err)
-	}
-	defer DB.Close() //we defer the closing to the very end when turning off
+	routes.RegisterRoutes(pool)
+	log.Fatal(http.ListenAndServe(":8080", nil))
 
-	log.Println("Database connected!")
-	log.Fatal(http.ListenAndServe(":8080", router))
+	defer pool.Close()
 }
