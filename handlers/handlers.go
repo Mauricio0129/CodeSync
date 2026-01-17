@@ -8,6 +8,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+var Keyfunc = func(token *jwt.Token) (any, error) {
+	return []byte(""), nil
+}
+
 func GenerateToken(w http.ResponseWriter, userID string) string {
 	key := ""
 	t := jwt.New(jwt.SigningMethodHS256)
@@ -23,6 +27,17 @@ func GenerateToken(w http.ResponseWriter, userID string) string {
 		return ""
 	}
 	return tokenString
+}
+
+func VerifyToken(token string, w http.ResponseWriter) string {
+	parsedtoken, err := jwt.Parse(token, Keyfunc)
+	if err != nil {
+		http.Error(w, "Invalid token", http.StatusUnauthorized)
+		return ""
+	}
+	mapClaims := parsedtoken.Claims.(jwt.MapClaims)
+	userID := mapClaims["user_id"].(string)
+	return userID
 }
 
 func HashPassword(password string, w http.ResponseWriter) string {

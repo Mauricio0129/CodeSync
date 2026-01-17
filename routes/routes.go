@@ -11,30 +11,34 @@ func later(writer http.ResponseWriter, request *http.Request) {
 
 }
 
+// Simplest CORS - just set headers on everything
+func CorsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 func RegisterRoutes(pool *pgxpool.Pool) {
-	// Initialize structures for services
 	projects := &services.ProjectServices{Pool: pool}
 	authentication := &services.AuthServices{Pool: pool}
 
-	// Authentication:
+	// Authentication
 	http.HandleFunc("POST /register", authentication.RegisterUser)
 	http.HandleFunc("POST /login", authentication.LoginUser)
 
-	// Projects:
-	http.HandleFunc("GET /", projects.GetProjects) // Get all the projects
-	http.HandleFunc("POST /", later)               // Register a new project
+	// Projects
+	http.HandleFunc("GET /", projects.GetProjects)
+	http.HandleFunc("POST /", projects.CreateProject)
 
-	// Directories:
-	http.HandleFunc("GET /project/{project_id}", later)                          // Get top level content of a project
-	http.HandleFunc("POST /project/{project_id}/directory", later)               // Create New directory inside project
-	http.HandleFunc("GET /project/{project_id}/directory/{directory_id}", later) // Get directory content
-
-	// Files:
-	http.HandleFunc("POST /project/{project_id}/file", later) // Create a new file inside a project
-
-	// Websocket
-	http.HandleFunc("GET /ws/file/{fileId}", later) // Websocket endpoint to start editing a file
-
-	// Test:
+	// Other routes...
 	http.HandleFunc("GET /test", later)
 }

@@ -5,21 +5,21 @@ import (
 	"context"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
+	connString := ""
 	objcontext := context.Background()
 
-	pool, err := pgxpool.New(objcontext, os.Getenv("DATABASE_URL")) // Logs the error and exits the program
+	pool, err := pgxpool.New(objcontext, connString)
 	if err != nil {
 		log.Fatal("Error connecting to database", err)
 	}
+	defer pool.Close()
 
 	routes.RegisterRoutes(pool)
-	log.Fatal(http.ListenAndServe(":8080", nil))
-
-	defer pool.Close()
+	handler := routes.CorsMiddleware(http.DefaultServeMux)
+	log.Fatal(http.ListenAndServe(":8080", handler))
 }

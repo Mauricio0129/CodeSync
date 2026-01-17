@@ -65,7 +65,7 @@ func (s *AuthServices) RegisterUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *AuthServices) LoginUser(w http.ResponseWriter, r *http.Request) {
-	var password string
+	var password, userID string
 	data := schemas.Login{}
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
@@ -80,13 +80,12 @@ func (s *AuthServices) LoginUser(w http.ResponseWriter, r *http.Request) {
 
 	context := r.Context()
 
-	log := s.Pool.QueryRow(
+	err = s.Pool.QueryRow(
 		context,
-		"SELECT password_hash FROM users WHERE email = $1 OR username = $2",
+		"SELECT id, password_hash FROM users WHERE email = $1 OR username = $2",
 		data.Email, data.Username,
-	)
+	).Scan(&userID, &password)
 
-	err = log.Scan(&password)
 	if err != nil {
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
@@ -97,7 +96,7 @@ func (s *AuthServices) LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jwt := handlers.GenerateToken(w, data.Username)
+	jwt := handlers.GenerateToken(w, userID)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
